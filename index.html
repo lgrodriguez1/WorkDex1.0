@@ -1,0 +1,1356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="WorkDex"/>
+  <meta name="theme-color" content="#cc0000"/>
+  <title>WorkDex</title>
+  <link rel="manifest" href="manifest.json"/>
+  <link rel="apple-touch-icon" href="icon-192.png"/>
+  <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png"/>
+  <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png"/>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+    :root {
+      /* Gen 3 FireRed/LeafGreen Pokédex palette */
+      --dex-red:        #cc0000;
+      --dex-red-dark:   #880000;
+      --dex-red-mid:    #aa0000;
+      --dex-red-light:  #ff3333;
+      --dex-hinge:      #991100;
+
+      --screen-bg:      #c8f0a8;   /* GBA screen green tint */
+      --screen-border:  #405820;
+      --screen-dark:    #1c2c10;
+
+      --panel-cream:    #f8f0d8;
+      --panel-border:   #c8a870;
+      --panel-shadow:   #a08040;
+
+      --dialog-bg:      #f8f8e8;
+      --dialog-border:  #303030;
+
+      --btn-blue:       #3050d0;
+      --btn-blue-hi:    #6080ff;
+      --btn-blue-lo:    #102060;
+      --btn-yellow:     #e8c000;
+      --btn-yellow-hi:  #fff080;
+      --btn-yellow-lo:  #806000;
+
+      --hp-green:       #58c838;
+      --hp-yellow:      #e8b800;
+      --hp-red:         #e02020;
+      --ot-purple:      #9040e0;
+      --ot-purple-hi:   #c080ff;
+      --ot-purple-lo:   #400880;
+
+      --text-dark:      #181818;
+      --text-mid:       #484848;
+      --text-light:     #787878;
+      --text-cream:     #f0e8d0;
+      --text-screen:    #1c2c10;
+
+      --white:          #ffffff;
+      --black:          #000000;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+      background: #1a0000;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      background: #1a0000;
+      font-family: 'Press Start 2P', monospace;
+      font-size: clamp(9px, 2.5vw, 11px);
+      line-height: 1.5;
+      -webkit-tap-highlight-color: transparent;
+      overflow-x: hidden;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-top: env(safe-area-inset-top);
+    }
+
+    #app {
+      max-width: 400px;
+      width: 100%;
+      margin: 0 auto;
+      min-height: calc(100dvh - env(safe-area-inset-top));
+      display: flex;
+      flex-direction: column;
+      background: var(--dex-red);
+      box-shadow: 4px 0 0 var(--dex-red-dark), -4px 0 0 var(--dex-red-dark);
+      padding-bottom: calc(env(safe-area-inset-bottom) + 12px);
+    }
+
+    /* ═══════════════════════════════
+       POKÉDEX TOP HALF
+    ═══════════════════════════════ */
+    .dex-top {
+      background: var(--dex-red);
+      padding: 14px 16px 0;
+      position: relative;
+    }
+
+    /* Top bar with lens + title */
+    .dex-topbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    /* The big blue circular lens */
+    .dex-lens-wrap {
+      position: relative;
+      flex-shrink: 0;
+    }
+    .dex-lens {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 30% 30%, #c0e8ff 0%, #4080e8 35%, #1030b0 70%, #0010608 100%);
+      border: 3px solid #e8e8e8;
+      box-shadow:
+        0 0 0 3px #800000,
+        0 0 0 5px #cc0000,
+        0 0 20px rgba(64,128,232,0.7);
+      animation: lens-glow 2.5s ease-in-out infinite;
+    }
+    @keyframes lens-glow {
+      0%,100% { box-shadow: 0 0 0 3px #800000, 0 0 0 5px #cc0000, 0 0 16px rgba(64,128,232,0.5); }
+      50%      { box-shadow: 0 0 0 3px #800000, 0 0 0 5px #cc0000, 0 0 28px rgba(64,128,232,0.9); }
+    }
+    /* Lens shine */
+    .dex-lens::after {
+      content: '';
+      position: absolute;
+      top: 6px; left: 7px;
+      width: 12px; height: 8px;
+      background: rgba(255,255,255,0.55);
+      border-radius: 50%;
+      transform: rotate(-30deg);
+    }
+
+    /* Small indicator lights */
+    .dex-lights {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .dex-light {
+      width: 10px; height: 10px; border-radius: 50%;
+      border: 2px solid rgba(0,0,0,0.3);
+    }
+    .dex-light.red    { background: radial-gradient(circle at 35% 35%, #ff8080, #cc0000); }
+    .dex-light.yellow { background: radial-gradient(circle at 35% 35%, #ffee80, #cc9900); }
+    .dex-light.green  { background: radial-gradient(circle at 35% 35%, #80ff80, #009900); }
+    .dex-light.active { animation: light-blink 1s step-end infinite; }
+    @keyframes light-blink { 50% { opacity: 0.2; } }
+
+    .dex-title-block { flex: 1; }
+    .dex-title {
+      font-size: 15px;
+      color: var(--white);
+      text-shadow: 2px 2px 0 var(--dex-red-dark), -1px -1px 0 rgba(255,255,255,0.1);
+      letter-spacing: 1px;
+    }
+    .dex-title span { color: #ffcc00; text-shadow: 2px 2px 0 #886600; }
+    .dex-subtitle {
+      font-size: 5px;
+      color: rgba(255,255,255,0.5);
+      letter-spacing: 2px;
+      margin-top: 4px;
+    }
+
+    /* Date badge top right */
+    .dex-date {
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .dex-date .d-day  { font-size: 7px; color: #ffcc00; text-shadow: 1px 1px 0 #664400; }
+    .dex-date .d-date { font-size: 6px; color: rgba(255,255,255,0.6); margin-top: 3px; }
+
+    /* ═══════════════════════════════
+       GBA-STYLE SCREEN
+    ═══════════════════════════════ */
+    .screen-container {
+      background: var(--dex-red);
+      padding: 0 16px 14px;
+    }
+
+    .screen-bezel {
+      background: #303030;
+      border-radius: 6px 6px 4px 4px;
+      padding: 8px;
+      box-shadow:
+        inset 0 3px 6px rgba(0,0,0,0.7),
+        0 2px 0 #181818;
+    }
+
+    .screen-inner {
+      background: var(--screen-bg);
+      border: 2px solid var(--screen-border);
+      border-radius: 2px;
+      padding: 10px 10px 8px;
+      position: relative;
+      overflow: hidden;
+      min-height: 180px;
+    }
+
+    /* Scanlines */
+    .screen-inner::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg, transparent, transparent 2px,
+        rgba(0,0,0,0.07) 2px, rgba(0,0,0,0.07) 4px
+      );
+      pointer-events: none;
+      z-index: 20;
+    }
+    /* Screen glare */
+    .screen-inner::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 40%;
+      background: linear-gradient(180deg, rgba(255,255,255,0.08), transparent);
+      pointer-events: none;
+      z-index: 21;
+    }
+
+    /* Screen layout: left = sprite, right = info */
+    .screen-layout {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    /* Charmander SVG sprite area */
+    .sprite-panel {
+      flex-shrink: 0;
+      width: 72px;
+    }
+    .sprite-frame {
+      width: 72px; height: 72px;
+      background: rgba(0,0,0,0.08);
+      border: 2px solid var(--screen-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      /* Crisp pixel rendering on Retina */
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+    .sprite-frame svg {
+      width: 64px; height: 64px;
+      image-rendering: pixelated;
+    }
+    /* idle bob animation */
+    @keyframes sprite-bob {
+      0%,100% { transform: translateY(0); }
+      50%      { transform: translateY(-3px); }
+    }
+    @keyframes sprite-active {
+      0%,100% { transform: translateY(0) scaleX(1); }
+      25%      { transform: translateY(-4px) scaleX(1.05); }
+      75%      { transform: translateY(-2px) scaleX(0.97); }
+    }
+    .sprite-frame svg { animation: sprite-bob 2s ease-in-out infinite; }
+    .sprite-frame svg.working { animation: sprite-active 1.5s ease-in-out infinite; }
+
+    .sprite-label {
+      font-size: 6px;
+      color: var(--text-screen);
+      text-align: center;
+      margin-top: 4px;
+      opacity: 0.8;
+    }
+
+    /* Right info panel */
+    .info-panel { flex: 1; }
+    .info-no {
+      font-size: 6px;
+      color: var(--text-screen);
+      opacity: 0.7;
+      margin-bottom: 4px;
+    }
+    .info-name {
+      font-size: 10px;
+      color: var(--text-screen);
+      margin-bottom: 2px;
+    }
+    .info-type {
+      display: inline-block;
+      font-size: 5px;
+      padding: 2px 5px;
+      background: #e07030;
+      color: var(--white);
+      border: 1px solid #803010;
+      margin-bottom: 8px;
+      letter-spacing: 1px;
+    }
+
+    /* HP-style progress bar */
+    .hp-section { margin-bottom: 6px; }
+    .hp-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 3px;
+    }
+    .hp-title { font-size: 6px; color: var(--text-screen); opacity: 0.8; }
+    .hp-fraction { font-size: 7px; color: var(--text-screen); }
+    .hp-bar-bg {
+      width: 100%;
+      height: 8px;
+      background: rgba(0,0,0,0.2);
+      border: 1px solid var(--screen-dark);
+      position: relative;
+    }
+    .hp-bar-fill {
+      height: 100%;
+      background: var(--hp-green);
+      transition: width 1s linear, background 0.5s;
+      position: relative;
+    }
+    .hp-bar-fill::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: rgba(255,255,255,0.4);
+    }
+    .hp-bar-fill.yellow { background: var(--hp-yellow); }
+    .hp-bar-fill.red    { background: var(--hp-red); animation: hp-flash 0.6s step-end infinite; }
+    @keyframes hp-flash { 50% { opacity: 0.4; } }
+
+    /* Mini stat grid */
+    .mini-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3px 8px;
+      margin-top: 6px;
+    }
+    .mini-stat {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(0,0,0,0.1);
+      padding-bottom: 2px;
+    }
+    .ms-key { font-size: 5px; color: var(--text-screen); opacity: 0.7; }
+    .ms-val { font-size: 6px; color: var(--text-screen); }
+    .ms-val.highlight { color: #004400; }
+
+    /* Clock row below sprite */
+    .clock-row {
+      margin-top: 8px;
+      border-top: 1px solid rgba(0,0,0,0.15);
+      padding-top: 6px;
+      text-align: center;
+    }
+    .clock-lbl { font-size: 5px; color: var(--text-screen); opacity: 0.6; letter-spacing: 2px; margin-bottom: 3px; }
+    .clock-val {
+      font-size: 16px;
+      color: var(--text-screen);
+      letter-spacing: 2px;
+    }
+    @keyframes colon-blink { 50% { opacity: 0; } }
+    .clk-colon { animation: colon-blink 1s step-end infinite; }
+    .clock-ampm { font-size: 7px; margin-left: 4px; }
+
+    /* Status tag below clock */
+    .status-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 5px;
+      padding: 3px 8px;
+      border: 1px solid var(--screen-dark);
+      font-size: 6px;
+      color: var(--text-screen);
+      background: rgba(0,0,0,0.1);
+    }
+    .status-dot {
+      width: 5px; height: 5px;
+      background: var(--text-screen);
+      opacity: 0.5;
+    }
+    .status-tag.s-active .status-dot {
+      background: #007700;
+      opacity: 1;
+      animation: pulse-dot 1s ease-in-out infinite;
+    }
+    .status-tag.s-active { border-color: #005500; color: #003300; background: rgba(0,180,0,0.15); }
+    .status-tag.s-done   { border-color: #554400; color: #332200; background: rgba(200,160,0,0.15); }
+    @keyframes pulse-dot { 50% { opacity: 0.2; } }
+
+    /* ═══════════════════════════════
+       POKÉDEX HINGE / FOLD LINE
+    ═══════════════════════════════ */
+    .dex-hinge {
+      height: 14px;
+      background: linear-gradient(180deg, var(--dex-red-dark) 0%, #660000 50%, var(--dex-red-dark) 100%);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .hinge-screw {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #c08060, #604030);
+      border: 1px solid #301810;
+    }
+    .hinge-bar {
+      width: 60px; height: 4px;
+      background: linear-gradient(180deg, #400000, #800000, #400000);
+      border-radius: 2px;
+    }
+
+    /* ═══════════════════════════════
+       POKÉDEX BOTTOM HALF
+    ═══════════════════════════════ */
+    .dex-bottom {
+      background: var(--dex-red);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 12px 16px;
+      gap: 12px;
+    }
+
+    /* ── Location toggle ── */
+    .section-label {
+      font-size: 6px;
+      color: rgba(255,255,255,0.45);
+      letter-spacing: 2px;
+      margin-bottom: 7px;
+    }
+
+    .loc-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .loc-btn {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      padding: 14px 6px;
+      min-height: 44px;
+      border: none;
+      cursor: pointer;
+      -webkit-appearance: none;
+      letter-spacing: 1px;
+      /* Unselected: dark gray */
+      background: #404040;
+      color: #888888;
+      border-top: 3px solid #606060;
+      border-left: 3px solid #606060;
+      border-bottom: 3px solid #181818;
+      border-right: 3px solid #181818;
+      transition: transform 0.06s;
+    }
+    .loc-btn:active {
+      transform: translate(2px,2px);
+      border-top-color: #181818; border-left-color: #181818;
+      border-bottom-color: #606060; border-right-color: #606060;
+    }
+    .loc-btn.sel-office {
+      background: var(--btn-blue);
+      color: var(--white);
+      border-top-color: var(--btn-blue-hi);
+      border-left-color: var(--btn-blue-hi);
+      border-bottom-color: var(--btn-blue-lo);
+      border-right-color: var(--btn-blue-lo);
+      text-shadow: 1px 1px 0 var(--btn-blue-lo);
+      box-shadow: 0 0 14px rgba(48,80,208,0.6);
+    }
+    .loc-btn.sel-wfh {
+      background: var(--btn-yellow);
+      color: #181800;
+      border-top-color: var(--btn-yellow-hi);
+      border-left-color: var(--btn-yellow-hi);
+      border-bottom-color: var(--btn-yellow-lo);
+      border-right-color: var(--btn-yellow-lo);
+      box-shadow: 0 0 14px rgba(232,192,0,0.5);
+    }
+    .loc-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none !important; }
+
+    /* ── Dialog box (Pokémon battle text box style) ── */
+    .dialog-box {
+      background: var(--dialog-bg);
+      border: 4px solid var(--dialog-border);
+      border-radius: 4px;
+      padding: 10px 12px;
+      position: relative;
+    }
+    .dialog-box::before {
+      content: '';
+      position: absolute;
+      inset: 3px;
+      border: 2px solid rgba(0,0,0,0.08);
+      border-radius: 2px;
+      pointer-events: none;
+    }
+
+    /* ── Elapsed stats inside dialog ── */
+    .elapsed-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 12px;
+    }
+    .el-card { }
+    .el-label {
+      font-size: 5px;
+      color: var(--text-light);
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+    .el-value {
+      font-size: 11px;
+      color: var(--text-dark);
+    }
+    /* Full-width helper for elapsed grid */
+    .el-full { grid-column: 1 / -1; }
+
+    .el-value.v-green  { color: #006600; }
+    .el-value.v-red    { color: #cc0000; }
+    .el-value.v-dim    { color: var(--text-light); }
+    .el-value.v-yellow { color: #886600; }
+    .el-value.v-ot     { color: #cc5500; }
+
+    /* Overtime card — full width, orange highlighted, hidden until 8H done */
+    .ot-card {
+      grid-column: 1 / -1;
+      display: none;
+      background: #fff0e0;
+      border: 2px solid #cc5500;
+      padding: 10px 12px;
+    }
+    .ot-card.ot-active {
+      display: block;
+      animation: ot-pulse 1.8s ease-in-out infinite;
+    }
+    .ot-card .el-label { color: #cc5500; letter-spacing: 1px; }
+    .ot-card .el-value { color: #cc5500; font-size: 14px; margin-top: 4px; }
+    @keyframes ot-pulse {
+      0%,100% { background: #fff0e0; border-color: #cc5500; }
+      50%      { background: #ffe0c0; border-color: #ff6600; }
+    }
+    .el-value.v-ot     {
+      color: var(--ot-purple);
+      animation: ot-pulse 1s ease-in-out infinite;
+    }
+    @keyframes ot-pulse {
+      0%,100% { color: var(--ot-purple); }
+      50%      { color: var(--ot-purple-hi); }
+    }
+
+    /* OT card — hidden by default, shown when OT starts */
+    .ot-card {
+      grid-column: 1 / -1;
+      background: rgba(144,64,224,0.08);
+      border: 2px solid var(--ot-purple);
+      padding: 8px 10px;
+      display: none;
+    }
+    .ot-card.visible { display: block; }
+    .ot-card .el-label {
+      color: var(--ot-purple);
+      letter-spacing: 1px;
+    }
+
+    /* ── Action buttons (A / B style) ── */
+    .action-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .act-btn {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      padding: 16px 8px;
+      min-height: 52px;
+      border: none;
+      cursor: pointer;
+      -webkit-appearance: none;
+      letter-spacing: 1px;
+      position: relative;
+      transition: transform 0.06s;
+      border-radius: 2px;
+    }
+    .act-btn:active { transform: translate(3px,3px); }
+    .act-btn:disabled {
+      opacity: 0.3; cursor: not-allowed; transform: none !important;
+      box-shadow: none !important;
+    }
+
+    .btn-in {
+      background: #30b830;
+      color: var(--white);
+      border-top: 3px solid #70e870;
+      border-left: 3px solid #70e870;
+      border-bottom: 3px solid #106010;
+      border-right: 3px solid #106010;
+      text-shadow: 1px 1px 0 #083008;
+      box-shadow: 3px 3px 0 #083008, 0 0 16px rgba(48,184,48,0.4);
+    }
+    .btn-in:not(:disabled):hover { box-shadow: 3px 3px 0 #083008, 0 0 24px rgba(48,184,48,0.7); }
+
+    .btn-out {
+      background: #e02020;
+      color: var(--white);
+      border-top: 3px solid #ff7060;
+      border-left: 3px solid #ff7060;
+      border-bottom: 3px solid #700000;
+      border-right: 3px solid #700000;
+      text-shadow: 1px 1px 0 #400000;
+      box-shadow: 3px 3px 0 #400000, 0 0 16px rgba(224,32,32,0.4);
+    }
+    .btn-out:not(:disabled):hover { box-shadow: 3px 3px 0 #400000, 0 0 24px rgba(224,32,32,0.7); }
+
+    /* ── Log section ── */
+    .log-wrap { }
+    .log-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .clear-btn {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 5px;
+      background: none;
+      border: 1px solid rgba(255,255,255,0.3);
+      color: rgba(255,255,255,0.4);
+      padding: 4px 7px;
+      cursor: pointer;
+      -webkit-appearance: none;
+      letter-spacing: 1px;
+    }
+    .clear-btn:active { opacity: 0.5; }
+
+    .log-list { display: flex; flex-direction: column; gap: 6px; }
+
+    .log-entry {
+      background: var(--dialog-bg);
+      border: 3px solid var(--dialog-border);
+      border-radius: 3px;
+      padding: 9px 10px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 6px 10px;
+      align-items: center;
+      animation: entry-in 0.2s ease;
+    }
+    @keyframes entry-in {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: none; }
+    }
+    .log-loc-badge {
+      font-size: 5px;
+      padding: 3px 5px;
+      border: 2px solid;
+      white-space: nowrap;
+      letter-spacing: 1px;
+    }
+    .log-loc-badge.office { border-color: var(--btn-blue); color: var(--btn-blue); }
+    .log-loc-badge.wfh    { border-color: #886600; color: #886600; }
+
+    .log-times { font-size: 6px; color: var(--text-mid); line-height: 2; }
+    .log-times .tl { font-size: 5px; color: var(--text-light); }
+
+    .log-right { text-align: right; }
+    .log-hrs { font-size: 8px; color: #006600; line-height: 1.6; }
+    .log-hrs.done::after { content: ' ✓'; color: #008800; }
+    .log-ot { font-size: 6px; color: #cc5500; margin-top: 2px; }
+    .log-dinfo { font-size: 5px; color: var(--text-light); line-height: 2; }
+
+    .log-empty {
+      background: var(--dialog-bg);
+      border: 3px solid var(--dialog-border);
+      border-radius: 3px;
+      text-align: center;
+      padding: 24px 10px;
+      font-size: 6px;
+      color: var(--text-light);
+      line-height: 3;
+    }
+
+    /* ── Toast (Pokémon notification style) ── */
+    .toast {
+      position: fixed;
+      bottom: calc(env(safe-area-inset-bottom) + 24px);
+      left: 50%;
+      transform: translateX(-50%) translateY(70px);
+      background: var(--dialog-bg);
+      border: 4px solid var(--dialog-border);
+      border-radius: 4px;
+      color: var(--text-dark);
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      padding: 10px 16px;
+      white-space: nowrap;
+      z-index: 9999;
+      transition: transform 0.25s cubic-bezier(.17,.67,.35,1.3);
+      box-shadow: 4px 4px 0 rgba(0,0,0,0.4);
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ═══ TOP HALF ═══ -->
+  <div class="dex-top">
+    <div class="dex-topbar">
+      <!-- Big lens -->
+      <div class="dex-lens-wrap">
+        <div class="dex-lens"></div>
+      </div>
+      <!-- Small lights -->
+      <div class="dex-lights">
+        <div class="dex-light red" id="light-red"></div>
+        <div class="dex-light yellow" id="light-yellow"></div>
+        <div class="dex-light green" id="light-green"></div>
+      </div>
+      <!-- Title -->
+      <div class="dex-title-block">
+        <div class="dex-title">WORK<span>DEX</span></div>
+        <div class="dex-subtitle">TRAINER SHIFT TRACKER</div>
+      </div>
+      <!-- Date -->
+      <div class="dex-date">
+        <div class="d-day" id="hdr-day">---</div>
+        <div class="d-date" id="hdr-date">-- --- ----</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SCREEN ═══ -->
+  <div class="screen-container">
+    <div class="screen-bezel">
+      <div class="screen-inner">
+        <div class="screen-layout">
+
+          <!-- Sprite left -->
+          <div class="sprite-panel">
+            <div class="sprite-frame">
+              <!-- Charmander pixel art SVG -->
+              <svg id="charmander-sprite" viewBox="0 0 34 34" xmlns="http://www.w3.org/2000/svg">
+                <!-- Each rect = 1 pixel unit, matching the reference grid sprite -->
+                <!-- COLORS:
+                     #e87020 = main orange body
+                     #f0a840 = lighter orange highlight
+                     #c85010 = dark orange outline/shadow
+                     #f8e0a0 = cream belly
+                     #d4b870 = belly shadow
+                     #ffffff = eye white
+                     #101010 = black outline / pupil
+                     #f8d000 = flame yellow
+                     #f89000 = flame orange
+                     #f84000 = flame red-orange
+                     #ffffff = flame tip white
+                -->
+
+                <!-- === TAIL (right side, curves up) === -->
+                <!-- tail base -->
+                <rect x="22" y="22" width="2" height="2" fill="#c85010"/>
+                <rect x="23" y="21" width="2" height="2" fill="#e87020"/>
+                <rect x="24" y="19" width="2" height="3" fill="#e87020"/>
+                <rect x="25" y="17" width="2" height="3" fill="#e87020"/>
+                <rect x="26" y="15" width="2" height="3" fill="#c85010"/>
+                <rect x="25" y="14" width="2" height="2" fill="#e87020"/>
+                <!-- tail tip -->
+                <rect x="26" y="12" width="2" height="2" fill="#e87020"/>
+                <rect x="27" y="11" width="2" height="2" fill="#c85010"/>
+
+                <!-- === FLAME on tail tip === -->
+                <!-- red base -->
+                <rect x="26" y="9"  width="2" height="3" fill="#f84000"/>
+                <rect x="25" y="8"  width="2" height="2" fill="#f84000"/>
+                <!-- orange mid -->
+                <rect x="27" y="8"  width="2" height="3" fill="#f89000"/>
+                <rect x="26" y="7"  width="2" height="2" fill="#f89000"/>
+                <!-- yellow inner -->
+                <rect x="27" y="6"  width="2" height="2" fill="#f8d000"/>
+                <rect x="26" y="5"  width="2" height="2" fill="#f8d000"/>
+                <!-- white tip -->
+                <rect x="27" y="4"  width="1" height="2" fill="#ffffff"/>
+
+                <!-- === HEAD === -->
+                <!-- top of head -->
+                <rect x="10" y="4"  width="10" height="1" fill="#c85010"/>
+                <rect x="9"  y="5"  width="12" height="1" fill="#e87020"/>
+                <rect x="8"  y="6"  width="13" height="1" fill="#e87020"/>
+                <!-- head main rows -->
+                <rect x="7"  y="7"  width="14" height="1" fill="#e87020"/>
+                <rect x="7"  y="8"  width="14" height="1" fill="#e87020"/>
+                <rect x="7"  y="9"  width="14" height="1" fill="#e87020"/>
+                <rect x="7"  y="10" width="14" height="1" fill="#e87020"/>
+                <rect x="7"  y="11" width="14" height="1" fill="#e87020"/>
+                <!-- snout bump -->
+                <rect x="8"  y="12" width="6"  height="1" fill="#e87020"/>
+                <rect x="15" y="12" width="5"  height="1" fill="#e87020"/>
+                <rect x="8"  y="13" width="5"  height="1" fill="#e87020"/>
+                <rect x="14" y="13" width="6"  height="1" fill="#e87020"/>
+
+                <!-- === EYES === -->
+                <!-- left eye -->
+                <rect x="9"  y="8"  width="3" height="3" fill="#ffffff"/>
+                <rect x="10" y="9"  width="2" height="2" fill="#101010"/>
+                <!-- right eye -->
+                <rect x="17" y="8"  width="3" height="3" fill="#ffffff"/>
+                <rect x="17" y="9"  width="2" height="2" fill="#101010"/>
+
+                <!-- nostrils -->
+                <rect x="12" y="13" width="1" height="1" fill="#101010"/>
+                <rect x="14" y="13" width="1" height="1" fill="#101010"/>
+
+                <!-- === BODY === -->
+                <rect x="8"  y="14" width="14" height="1" fill="#e87020"/>
+                <rect x="8"  y="15" width="14" height="1" fill="#e87020"/>
+                <rect x="8"  y="16" width="14" height="1" fill="#e87020"/>
+                <rect x="8"  y="17" width="14" height="1" fill="#e87020"/>
+                <rect x="8"  y="18" width="13" height="1" fill="#e87020"/>
+                <rect x="8"  y="19" width="13" height="1" fill="#e87020"/>
+                <rect x="9"  y="20" width="11" height="1" fill="#e87020"/>
+                <rect x="9"  y="21" width="10" height="1" fill="#e87020"/>
+                <rect x="10" y="22" width="9"  height="1" fill="#e87020"/>
+
+                <!-- === BELLY (cream) === -->
+                <rect x="10" y="15" width="8" height="1" fill="#f8e0a0"/>
+                <rect x="10" y="16" width="8" height="1" fill="#f8e0a0"/>
+                <rect x="10" y="17" width="8" height="1" fill="#f8e0a0"/>
+                <rect x="10" y="18" width="8" height="1" fill="#f8e0a0"/>
+                <rect x="11" y="19" width="7" height="1" fill="#f8e0a0"/>
+                <rect x="11" y="20" width="6" height="1" fill="#d4b870"/>
+                <rect x="11" y="21" width="5" height="1" fill="#d4b870"/>
+
+                <!-- === LEFT ARM === -->
+                <rect x="5"  y="15" width="4" height="2" fill="#e87020"/>
+                <rect x="4"  y="16" width="3" height="2" fill="#e87020"/>
+                <rect x="4"  y="17" width="2" height="2" fill="#c85010"/>
+                <!-- claws -->
+                <rect x="3"  y="18" width="1" height="1" fill="#c85010"/>
+                <rect x="5"  y="18" width="1" height="1" fill="#c85010"/>
+
+                <!-- === RIGHT ARM === -->
+                <rect x="22" y="15" width="4" height="2" fill="#e87020"/>
+                <rect x="23" y="16" width="3" height="2" fill="#e87020"/>
+                <rect x="24" y="17" width="2" height="2" fill="#c85010"/>
+                <!-- claws -->
+                <rect x="24" y="18" width="1" height="1" fill="#c85010"/>
+                <rect x="26" y="18" width="1" height="1" fill="#c85010"/>
+
+                <!-- === LEGS === -->
+                <!-- left leg -->
+                <rect x="9"  y="23" width="4" height="2" fill="#e87020"/>
+                <rect x="8"  y="25" width="5" height="2" fill="#e87020"/>
+                <rect x="7"  y="26" width="6" height="1" fill="#c85010"/>
+                <!-- left toes -->
+                <rect x="7"  y="27" width="2" height="1" fill="#c85010"/>
+                <rect x="10" y="27" width="2" height="1" fill="#c85010"/>
+
+                <!-- right leg -->
+                <rect x="15" y="23" width="4" height="2" fill="#e87020"/>
+                <rect x="15" y="25" width="5" height="2" fill="#e87020"/>
+                <rect x="15" y="26" width="6" height="1" fill="#c85010"/>
+                <!-- right toes -->
+                <rect x="15" y="27" width="2" height="1" fill="#c85010"/>
+                <rect x="18" y="27" width="2" height="1" fill="#c85010"/>
+
+                <!-- === OUTLINE shadow accents === -->
+                <rect x="7"  y="6"  width="1" height="1" fill="#c85010"/>
+                <rect x="20" y="6"  width="1" height="1" fill="#c85010"/>
+                <rect x="7"  y="13" width="1" height="1" fill="#c85010"/>
+                <rect x="20" y="13" width="1" height="1" fill="#c85010"/>
+              </svg>
+            </div>
+            <div class="sprite-label" id="sprite-label">CHARMANDER</div>
+          </div>
+
+          <!-- Info right -->
+          <div class="info-panel">
+            <div class="info-no" id="info-no">No.004</div>
+            <div class="info-name">CHARMANDER</div>
+            <div class="info-type">FIRE</div>
+
+            <!-- Shift HP bar -->
+            <div class="hp-section">
+              <div class="hp-top-row">
+                <div class="hp-title">SHIFT HP</div>
+                <div class="hp-fraction" id="hp-fraction">0/8H</div>
+              </div>
+              <div class="hp-bar-bg">
+                <div class="hp-bar-fill" id="hp-bar" style="width:0%"></div>
+              </div>
+            </div>
+
+            <!-- Mini stats -->
+            <div class="mini-stats">
+              <div class="mini-stat">
+                <div class="ms-key">IN</div>
+                <div class="ms-val" id="ms-in">--:--</div>
+              </div>
+              <div class="mini-stat">
+                <div class="ms-key">NET</div>
+                <div class="ms-val v-green" id="ms-net">0H00M</div>
+              </div>
+              <div class="mini-stat">
+                <div class="ms-key">EXP</div>
+                <div class="ms-val" id="ms-elapsed">0H00M</div>
+              </div>
+              <div class="mini-stat">
+                <div class="ms-key">REM</div>
+                <div class="ms-val" id="ms-rem">8H00M</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Clock row -->
+        <div class="clock-row">
+          <div class="clock-lbl">// CURRENT TIME</div>
+          <div class="clock-val" id="clock-disp">
+            00<span class="clk-colon">:</span>00<span class="clk-colon">:</span>00
+            <span class="clock-ampm" id="clock-ampm">AM</span>
+          </div>
+          <div style="text-align:center">
+            <div class="status-tag" id="status-tag">
+              <div class="status-dot"></div>
+              <span id="status-txt">AWAITING TRAINER</span>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /screen-inner -->
+    </div><!-- /screen-bezel -->
+  </div><!-- /screen-container -->
+
+  <!-- ═══ HINGE ═══ -->
+  <div class="dex-hinge">
+    <div class="hinge-screw"></div>
+    <div class="hinge-bar"></div>
+    <div class="hinge-screw"></div>
+  </div>
+
+  <!-- ═══ BOTTOM HALF ═══ -->
+  <div class="dex-bottom">
+
+    <!-- Location -->
+    <div>
+      <div class="section-label">// LOCATION SELECT</div>
+      <div class="loc-grid">
+        <button class="loc-btn sel-office" id="loc-office" onclick="setLoc('OFFICE')">🏢 OFFICE</button>
+        <button class="loc-btn"            id="loc-wfh"    onclick="setLoc('WFH')">🏠 WFH</button>
+      </div>
+    </div>
+
+    <!-- Elapsed stats dialog -->
+    <div class="dialog-box">
+      <div class="elapsed-grid">
+        <div class="el-card">
+          <div class="el-label">TIME IN</div>
+          <div class="el-value v-dim" id="el-in">--:-- --</div>
+        </div>
+        <div class="el-card">
+          <div class="el-label">TIME OUT</div>
+          <div class="el-value v-dim" id="el-out">--:-- --</div>
+        </div>
+        <div class="el-card">
+          <div class="el-label">ELAPSED</div>
+          <div class="el-value" id="el-elapsed">0H 00M</div>
+        </div>
+        <div class="el-card">
+          <div class="el-label">NET (−1H LUNCH)</div>
+          <div class="el-value v-green" id="el-net">0H 00M</div>
+        </div>
+        <!-- REMAINING — visible until 8H net is reached -->
+        <div class="el-card el-full" id="rem-card">
+          <div class="el-label">REMAINING TO 8H</div>
+          <div class="el-value" id="el-rem">8H 00M</div>
+        </div>
+        <!-- OVERTIME — replaces REMAINING once 8H net is done -->
+        <div class="ot-card" id="ot-card">
+          <div class="el-label">⚡ OVERTIME</div>
+          <div class="el-value v-ot" id="el-ot">0H 00M</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action buttons -->
+    <div>
+      <div class="section-label">// ACTIONS</div>
+      <div class="action-row">
+        <button class="act-btn btn-in"  id="btn-in"  onclick="doTimeIn()">▶ TIME IN</button>
+        <button class="act-btn btn-out" id="btn-out" onclick="doTimeOut()" disabled>■ TIME OUT</button>
+      </div>
+    </div>
+
+    <!-- Log -->
+    <div class="log-wrap">
+      <div class="log-header">
+        <div class="section-label" style="margin-bottom:0">// SHIFT LOG</div>
+        <button class="clear-btn" onclick="clearLog()">CLEAR ALL</button>
+      </div>
+      <div class="log-list" id="log-list"></div>
+    </div>
+
+  </div><!-- /dex-bottom -->
+</div><!-- /app -->
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── Constants ───────────────────────────────
+const STORAGE_KEY = 'workdex_logs_v1';
+const WORK_MINS   = 480; // 8 hours
+const LUNCH_MINS  = 60;
+
+// ─── State ───────────────────────────────────
+let state = {
+  loc: 'OFFICE',
+  timeIn: null,
+  isActive: false,
+  otNotified: false
+};
+
+// ─── Storage helpers ─────────────────────────
+function getLogs() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch { return []; }
+}
+function saveLogs(l) { localStorage.setItem(STORAGE_KEY, JSON.stringify(l)); }
+
+// ─── Clock tick ──────────────────────────────
+function tick() {
+  const now = new Date();
+  // Clock display
+  let h = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12  = h % 12 || 12;
+  document.getElementById('clock-disp').innerHTML =
+    `${pad(h12)}<span class="clk-colon">:</span>${pad(m)}<span class="clk-colon">:</span>${pad(s)}<span class="clock-ampm">${ampm}</span>`;
+
+  // Header date
+  const DAYS   = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  document.getElementById('hdr-day').textContent  = DAYS[now.getDay()];
+  document.getElementById('hdr-date').textContent = `${pad(now.getDate())} ${MONTHS[now.getMonth()]} ${now.getFullYear()}`;
+
+  // Elapsed calculations
+  if (state.isActive && state.timeIn) {
+    const diffMs    = now - state.timeIn;
+    const totalMins = Math.floor(diffMs / 60000);
+    const netMins   = Math.max(0, totalMins - LUNCH_MINS);
+    const remMins   = Math.max(0, WORK_MINS - netMins);
+    const otMins    = Math.max(0, netMins - WORK_MINS);
+    const pct       = Math.min(100, Math.round((netMins / WORK_MINS) * 100));
+
+    // Dialog
+    document.getElementById('el-elapsed').textContent = fmtDur(totalMins);
+    const netEl = document.getElementById('el-net');
+    netEl.textContent = fmtDur(netMins);
+
+    const remEl = document.getElementById('el-rem');
+    const remCard = document.getElementById('rem-card');
+    const otCard  = document.getElementById('ot-card');
+    const otEl    = document.getElementById('el-ot');
+
+    if (otMins > 0) {
+      // 8H done — hide REMAINING, show OVERTIME
+      remCard.style.display = 'none';
+      otCard.className = 'ot-card ot-active';
+      otEl.textContent = fmtDur(otMins);
+      remEl.textContent = 'COMPLETE! 🎉';
+      if (!state.otNotified) {
+        state.otNotified = true;
+        toast('⚡ OVERTIME STARTED!');
+      }
+    } else {
+      // Still working toward 8H — show REMAINING
+      remCard.style.display = '';
+      otCard.className = 'ot-card';
+      remEl.textContent = remMins > 0 ? fmtDur(remMins) : 'COMPLETE! 🎉';
+      remEl.className   = 'el-value ' + (remMins <= 0 ? 'v-green' : remMins <= 60 ? 'v-red' : '');
+      state.otNotified  = false;
+    }
+
+    // Mini stats — show OT in REM slot once overtime
+    document.getElementById('ms-elapsed').textContent = fmtDurShort(totalMins);
+    document.getElementById('ms-net').textContent     = fmtDurShort(netMins);
+    document.getElementById('ms-rem').textContent     = otMins > 0 ? `+${fmtDurShort(otMins)}` : (remMins > 0 ? fmtDurShort(remMins) : 'DONE!');
+
+    // HP bar
+    const bar = document.getElementById('hp-bar');
+    bar.style.width = pct + '%';
+    bar.className   = 'hp-bar-fill' + (pct >= 100 ? '' : pct >= 50 ? '' : pct >= 25 ? ' yellow' : ' red');
+    document.getElementById('hp-fraction').textContent =
+      `${Math.floor(netMins/60)}H${pad(netMins%60)}M/8H`;
+
+    // Indicator lights
+    document.getElementById('light-green').classList.toggle('active', true);
+    document.getElementById('light-yellow').classList.toggle('active', pct >= 50);
+  }
+}
+
+// ─── Location ────────────────────────────────
+function setLoc(loc) {
+  if (state.isActive) return;
+  state.loc = loc;
+  document.getElementById('loc-office').className = 'loc-btn' + (loc === 'OFFICE' ? ' sel-office' : '');
+  document.getElementById('loc-wfh').className    = 'loc-btn' + (loc === 'WFH'    ? ' sel-wfh'    : '');
+}
+
+// ─── Session persistence ─────────────────────
+const SESSION_KEY = 'workdex_session_v1';
+function saveSession() {
+  localStorage.setItem(SESSION_KEY, JSON.stringify({
+    timeIn:  state.timeIn ? state.timeIn.toISOString() : null,
+    loc:     state.loc,
+    isActive: state.isActive
+  }));
+}
+function clearSession() {
+  localStorage.removeItem(SESSION_KEY);
+}
+function restoreSession() {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return;
+    const s = JSON.parse(raw);
+    if (!s.isActive || !s.timeIn) return;
+    // Restore state
+    state.timeIn     = new Date(s.timeIn);
+    state.isActive   = true;
+    state.loc        = s.loc || 'OFFICE';
+    // Restore UI
+    setLoc(state.loc);
+    document.getElementById('loc-office').disabled = true;
+    document.getElementById('loc-wfh').disabled    = true;
+    document.getElementById('btn-in').disabled     = true;
+    document.getElementById('btn-out').disabled    = false;
+    document.getElementById('el-in').textContent   = fmtTime(state.timeIn);
+    document.getElementById('el-in').className     = 'el-value';
+    document.getElementById('ms-in').textContent   = fmtTimeShort(state.timeIn);
+    const tag = document.getElementById('status-tag');
+    tag.className = 'status-tag s-active';
+    document.getElementById('status-txt').textContent = state.loc === 'WFH' ? 'WFH MODE' : 'ON DUTY';
+    document.getElementById('charmander-sprite').classList.add('working');
+    document.getElementById('sprite-label').textContent = state.loc === 'WFH' ? 'WFH TRAINER' : 'ON DUTY';
+    document.getElementById('light-red').classList.add('active');
+    toast(`⏱ SESSION RESTORED ${fmtTime(state.timeIn)}`);
+  } catch(e) { clearSession(); }
+}
+
+// ─── Time In ─────────────────────────────────
+function doTimeIn() {
+  const now  = new Date();
+  state.timeIn   = now;
+  state.isActive = true;
+
+  // Lock location
+  document.getElementById('loc-office').disabled = true;
+  document.getElementById('loc-wfh').disabled    = true;
+
+  // Buttons
+  document.getElementById('btn-in').disabled  = true;
+  document.getElementById('btn-out').disabled = false;
+
+  // Screen updates
+  document.getElementById('el-in').textContent  = fmtTime(now);
+  document.getElementById('el-in').className    = 'el-value';
+  document.getElementById('el-out').textContent = '--:-- --';
+  document.getElementById('ms-in').textContent  = fmtTimeShort(now);
+
+  // Status
+  const tag = document.getElementById('status-tag');
+  tag.className = 'status-tag s-active';
+  document.getElementById('status-txt').textContent = state.loc === 'WFH' ? 'WFH MODE' : 'ON DUTY';
+
+  // Sprite animate
+  document.getElementById('charmander-sprite').classList.add('working');
+  document.getElementById('sprite-label').textContent = state.loc === 'WFH' ? 'WFH TRAINER' : 'ON DUTY';
+
+  // Lights
+  document.getElementById('light-red').classList.add('active');
+
+  saveSession();
+  toast(`▶ PUNCHED IN ${fmtTime(now)}`);
+}
+
+// ─── Time Out ────────────────────────────────
+function doTimeOut() {
+  if (!state.isActive || !state.timeIn) return;
+  const now       = new Date();
+  const diffMs    = now - state.timeIn;
+  const totalMins = Math.floor(diffMs / 60000);
+  const netMins   = Math.max(0, totalMins - LUNCH_MINS);
+  const otMins    = Math.max(0, netMins - WORK_MINS);
+
+  // Save
+  const logs = getLogs();
+  logs.unshift({
+    date:      fmtDate(now),
+    day:       getDayName(now),
+    loc:       state.loc,
+    timeIn:    fmtTime(state.timeIn),
+    timeOut:   fmtTime(now),
+    totalMins, netMins, otMins
+  });
+  saveLogs(logs);
+
+  // Reset state
+  state.isActive    = false;
+  state.timeIn      = null;
+  state.otNotified  = false;
+  clearSession();
+
+  // Unlock location
+  document.getElementById('loc-office').disabled = false;
+  document.getElementById('loc-wfh').disabled    = false;
+
+  // Buttons
+  document.getElementById('btn-in').disabled  = false;
+  document.getElementById('btn-out').disabled = true;
+
+  // Screen
+  document.getElementById('el-out').textContent = fmtTime(now);
+  document.getElementById('el-out').className   = 'el-value';
+
+  // Status
+  const tag = document.getElementById('status-tag');
+  tag.className = 'status-tag s-done';
+  document.getElementById('status-txt').textContent = 'SHIFT COMPLETE';
+
+  // Sprite idle
+  document.getElementById('charmander-sprite').classList.remove('working');
+  document.getElementById('sprite-label').textContent = 'CHARMANDER';
+
+  // Reset HP
+  document.getElementById('hp-bar').style.width = '0%';
+  document.getElementById('hp-bar').className   = 'hp-bar-fill';
+  document.getElementById('hp-fraction').textContent = '0/8H';
+  document.getElementById('ms-in').textContent      = '--:--';
+  document.getElementById('ms-elapsed').textContent = '0H00M';
+  document.getElementById('ms-net').textContent     = '0H00M';
+  document.getElementById('ms-rem').textContent     = '8H00M';
+  document.getElementById('el-elapsed').textContent = '0H 00M';
+  document.getElementById('el-net').textContent     = '0H 00M';
+  document.getElementById('el-rem').textContent     = '8H 00M';
+  document.getElementById('el-rem').className       = 'el-value';
+  document.getElementById('rem-card').style.display = '';
+  document.getElementById('ot-card').className      = 'ot-card';
+  document.getElementById('el-ot').textContent      = '0H 00M';
+
+  // Lights reset
+  document.getElementById('light-red').classList.remove('active');
+  document.getElementById('light-green').classList.remove('active');
+  document.getElementById('light-yellow').classList.remove('active');
+
+  renderLogs();
+  toast(`■ PUNCHED OUT ${fmtTime(now)}`);
+}
+
+// ─── Render log ──────────────────────────────
+function renderLogs() {
+  const logs = getLogs();
+  const el   = document.getElementById('log-list');
+  if (!logs.length) {
+    el.innerHTML = `<div class="log-empty">NO ENTRIES YET<br>PUNCH IN TO BEGIN<br>YOUR ADVENTURE!</div>`;
+    return;
+  }
+  el.innerHTML = logs.map(l => {
+    const nH   = Math.floor(l.netMins / 60);
+    const nM   = l.netMins % 60;
+    const otH  = Math.floor((l.otMins || 0) / 60);
+    const otM  = (l.otMins || 0) % 60;
+    const cls  = l.netMins >= WORK_MINS ? 'log-hrs done' : 'log-hrs';
+    const otBadge = (l.otMins > 0)
+      ? `<div class="log-ot">⚡ OT ${otH}H${pad(otM)}M</div>`
+      : '';
+    return `<div class="log-entry">
+      <div class="log-loc-badge ${l.loc.toLowerCase()}">${l.loc}</div>
+      <div class="log-times">
+        <span class="tl">IN  </span>${l.timeIn}<br>
+        <span class="tl">OUT </span>${l.timeOut}
+      </div>
+      <div class="log-right">
+        <div class="${cls}">${nH}H${pad(nM)}M</div>
+        ${otBadge}
+        <div class="log-dinfo">${l.day}<br>${l.date}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─── Clear ───────────────────────────────────
+function clearLog() {
+  if (!confirm('CLEAR ALL SHIFT LOGS?')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  renderLogs();
+  toast('LOG CLEARED');
+}
+
+// ─── Toast ───────────────────────────────────
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+}
+
+// ─── Formatters ──────────────────────────────
+function pad(n) { return String(n).padStart(2,'0'); }
+function fmtTime(d) {
+  let h = d.getHours(), m = d.getMinutes();
+  const ap = h >= 12 ? 'PM' : 'AM';
+  return `${pad(h%12||12)}:${pad(m)} ${ap}`;
+}
+function fmtTimeShort(d) {
+  let h = d.getHours(), m = d.getMinutes();
+  const ap = h >= 12 ? 'PM' : 'AM';
+  return `${pad(h%12||12)}:${pad(m)}${ap}`;
+}
+function fmtDur(mins) {
+  return `${Math.floor(mins/60)}H ${pad(mins%60)}M`;
+}
+function fmtDurShort(mins) {
+  return `${Math.floor(mins/60)}H${pad(mins%60)}M`;
+}
+function fmtDate(d) {
+  const M = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  return `${pad(d.getDate())} ${M[d.getMonth()]} ${d.getFullYear()}`;
+}
+function getDayName(d) {
+  return ['SUN','MON','TUE','WED','THU','FRI','SAT'][d.getDay()];
+}
+
+// ─── Service Worker ──────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
+
+// ─── Init ────────────────────────────────────
+restoreSession();
+setInterval(tick, 1000);
+tick();
+renderLogs();
+</script>
+</body>
+</html>
